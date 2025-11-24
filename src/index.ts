@@ -1,6 +1,8 @@
 import Fastify from 'fastify';
 import websocket from '@fastify/websocket';
 
+import { MockDexRouter } from './domain/mockDexRouter';
+
 const server = Fastify({
   logger: true // This enables the built-in logger (good for debugging)
 });
@@ -16,6 +18,18 @@ server.get('/ws', { websocket: true }, (connection, req) => {
     connection.socket.send(`You said: ${message.toString()}`);
   });
 });
+
+const runTest = async () => {
+    const router = new MockDexRouter();
+    console.log("--- STARTING MOCK ROUTER TEST ---");
+    const bestQuote = await router.routeAndGetQuote("SOL", "USDC", 1);
+    const result = await router.executeSwap(bestQuote, "order-123");
+    console.log("Swap Result:", result);
+    console.log("--- TEST COMPLETE ---");
+}
+
+// Call it before starting the server
+runTest();
 
 const start = async () => {
   try {

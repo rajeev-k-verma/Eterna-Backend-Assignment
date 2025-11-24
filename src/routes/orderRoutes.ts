@@ -1,0 +1,89 @@
+import { FastifyInstance } from 'fastify';
+import { orderQueue, queueEvents } from '../infrastructure/queue';
+import { Order } from '../domain/mockDexRouter';
+
+export async function orderRoutes(fastify: FastifyInstance) {
+  
+  // 1. POST Endpoint: Submit an Order
+  fastify.post('/orders/execute', async (request, reply) => {
+    const orderData = request.body as any;
+
+    const orderId = `order-${Date.now()}`;
+    
+    const order: Order = {
+      orderId,
+      type: 'market',
+      side: orderData.side || 'buy',
+      amount: orderData.amount || 1,
+      tokenIn: orderData.tokenIn || 'SOL',
+      tokenOut: orderData.tokenOut || 'USDC'
+    };
+
+    // Add to the Queue
+    await orderQueue.add('execute-order', order, { jobId: orderId });
+
+    return { 
+      status: 'queued', 
+      orderId,
+      message: 'Order received and processing started.' 
+    };
+  });
+
+  // 2. WebSocket Endpoint: Live Updates
+  fastify.get('/ws/orders', { websocket: true }, (connection, req: any) => {
+    const query = req.query as { orderId: string };
+    const { orderId } = query;
+
+    if (!orderId) {
+      connection.socket.send(JSON.stringify({ error: 'Missing orderId' }));
+      connection.socket.close();
+      return;
+    }
+
+    console.log(`[WebSocket] Client connected for order: ${orderId}`);
+
+    // Listener 1: Progress Updates
+    const progressHandler = async ({ jobId, data }: { jobId: string; data: number | object | string | boolean }) => {
+      if (jobId === orderId) {
+        let status = 'pending';
+        if (typeof data === 'number') {
+            if (data === 10) status = 'routing';
+            if (data === 50) status = 'submitted';
+        }
+        
+        connection.socket.send(JSON.stringify({ orderId, status, progress: data }));
+      }
+    };
+
+    // Listener 2: Completion
+    const completedHandler = async ({ jobId, returnvalue }: { jobId: string; returnvalue: any }) => {
+      if (jobId === orderId) {
+        connection.socket.send(JSON.stringify({ 
+          orderId, 
+          status: 'confirmed', 
+          txHash: returnvalue.txHash,
+          price: returnvalue.executedPrice 
+        }));
+      }
+    };
+
+    // Listener 3: Failure
+    const failedHandler = async ({ jobId, failedReason }: { jobId: string; failedReason: string }) => {
+      if (jobId === orderId) {
+        connection.socket.send(JSON.stringify({ orderId, status: 'failed', error: failedReason }));
+      }
+    };
+
+    // Attach the listeners to BullMQ
+    queueEvents.on('progress', progressHandler);
+    queueEvents.on('completed', completedHandler);
+    queueEvents.on('failed', failedHandler);
+
+    connection.socket.on('close', () => {
+      console.log(`[WebSocket] Client disconnected: ${orderId}`);
+      queueEvents.off('progress', progressHandler);
+      queueEvents.off('completed', completedHandler);
+      queueEvents.off('failed', failedHandler);
+    });
+  });
+}

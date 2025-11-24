@@ -1,4 +1,4 @@
-import { Queue } from 'bullmq';
+import { Queue, QueueEvents } from 'bullmq';
 import { connection } from '../config/redis';
 
 export const ORDER_QUEUE_NAME = 'order-execution-queue';
@@ -15,3 +15,5 @@ export const orderQueue = new Queue(ORDER_QUEUE_NAME, {
     removeOnFail: false // Keep failed jobs so we can inspect them
   }
 });
+
+export const queueEvents = new QueueEvents(ORDER_QUEUE_NAME, { connection });

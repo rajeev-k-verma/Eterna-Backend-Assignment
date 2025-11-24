@@ -1,9 +1,11 @@
 import IORedis from 'ioredis';
 
-const REDIS_CONNECTION = {
-  host: 'localhost', 
-  port: 6379,
-  maxRetriesPerRequest: null // Required requirement for BullMQ
-};
-
-export const connection = new IORedis(REDIS_CONNECTION);
+export const connection = process.env.REDIS_URL 
+? new IORedis(process.env.REDIS_URL, {
+    maxRetriesPerRequest: null
+  })
+: new IORedis({
+    host: 'localhost', 
+    port: 6379,
+    maxRetriesPerRequest: null
+  });

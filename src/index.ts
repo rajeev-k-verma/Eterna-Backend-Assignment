@@ -38,8 +38,9 @@ server.get('/test-queue', async () => {
 
 const start = async () => {
   try {
-    await server.listen({ port: 3000, host: '0.0.0.0' });
-    console.log('Server started on http://localhost:3000');
+    const port = parseInt(process.env.PORT || '3000');
+    await server.listen({ port, host: '0.0.0.0' });
+    console.log(`Server started on port ${port}`);
   } catch (err) {
     server.log.error(err);
     process.exit(1);

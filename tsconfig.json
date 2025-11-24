@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",                /* Modern JS features */
+    "module": "commonjs",              /* Standard Node.js modules */
+    "rootDir": "./src",                /* Where our code lives */
+    "outDir": "./dist",                /* Where compiled code goes */
+    "strict": true,                    /* Enable all strict type-checking options */
+    "esModuleInterop": true,           /* Better compatibility with older modules */
+    "skipLibCheck": true,              /* Speed up compilation */
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src/**/*"]
+}

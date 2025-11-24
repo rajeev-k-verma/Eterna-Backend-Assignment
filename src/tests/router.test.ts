@@ -48,4 +48,28 @@ describe('MockDexRouter Logic', () => {
         expect(result.txHash).toBeDefined();
         expect(result.txHash).toContain('5x');
     });
+
+    // Test 7: The "Reverse" Scenario (Meteora is cheaper)
+    test('should route to Meteora when it offers a better price', async () => {
+        // Force Raydium to be EXPENSIVE (160)
+        jest.spyOn(router, 'getRaydiumQuote').mockResolvedValue({
+            dex: 'raydium', price: 160, fee: 0.1
+        });
+        // Force Meteora to be CHEAP (155)
+        jest.spyOn(router, 'getMeteoraQuote').mockResolvedValue({
+            dex: 'meteora', price: 155, fee: 0.1
+        });
+
+        const bestQuote = await router.routeAndGetQuote('SOL', 'USDC', 1);
+        
+        expect(bestQuote.dex).toBe('meteora');
+        expect(bestQuote.price).toBe(155);
+    });
+
+    // Test 8: Data Integrity
+    test('should always return a quote with a defined fee', async () => {
+        const quote = await router.getRaydiumQuote('SOL', 'USDC', 1);
+        expect(quote.fee).toBeDefined();
+        expect(typeof quote.fee).toBe('number');
+    });
 });

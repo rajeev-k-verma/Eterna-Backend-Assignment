@@ -51,4 +51,40 @@ describe('API Endpoints', () => {
         expect(response.status).toBe(200); // Or 400 if you add validation later
         expect(response.body.orderId).toBeDefined();
     });
+
+    // Test 9: Default Values (Token Names)
+    test('POST /orders/execute uses default tokens if not provided', async () => {
+        const addSpy = jest.spyOn(require('../infrastructure/queue').orderQueue, 'add');
+        
+        await request.post('/orders/execute').send({ amount: 5 }); // Sending MINIMAL data
+
+        // Check if the defaults were applied in the arguments passed to the queue
+        expect(addSpy).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ 
+                tokenIn: 'SOL', 
+                tokenOut: 'USDC' 
+            }),
+            expect.anything()
+        );
+    });
+
+    // Test 10: Default Values (Order Side)
+    test('POST /orders/execute defaults side to "buy"', async () => {
+        const addSpy = jest.spyOn(require('../infrastructure/queue').orderQueue, 'add');
+        
+        await request.post('/orders/execute').send({ amount: 5 });
+
+        expect(addSpy).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ side: 'buy' }),
+            expect.anything()
+        );
+    });
+
+    // Test 11: ID Format
+    test('generated orderId should follow the correct format', async () => {
+        const response = await request.post('/orders/execute').send({ amount: 1 });
+        expect(response.body.orderId).toMatch(/^order-\d+/); // Regex: starts with "order-" followed by numbers
+    });
 });

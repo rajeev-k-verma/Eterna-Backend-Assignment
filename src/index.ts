@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import websocket from '@fastify/websocket';
+import cors from '@fastify/cors';
 
 import { initDB } from './config/database';
 import { orderRoutes } from './routes/orderRoutes';
@@ -9,6 +10,7 @@ const server = Fastify({
   logger: true // This enables the built-in logger (good for debugging)
 });
 
+server.register(cors, { origin: true });
 server.register(websocket);
 server.register(orderRoutes);
 

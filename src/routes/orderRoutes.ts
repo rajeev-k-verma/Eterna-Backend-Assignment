@@ -30,13 +30,13 @@ export async function orderRoutes(fastify: FastifyInstance) {
   });
 
   // 2. WebSocket Endpoint: Live Updates
-  fastify.get('/ws/orders', { websocket: true }, (connection, req: any) => {
+  fastify.get('/ws/orders', { websocket: true }, (socket, req: any) => {
     const query = req.query as { orderId: string };
     const { orderId } = query;
 
     if (!orderId) {
-      connection.socket.send(JSON.stringify({ error: 'Missing orderId' }));
-      connection.socket.close();
+      socket.send(JSON.stringify({ error: 'Missing orderId' }));
+      socket.close();
       return;
     }
 
@@ -51,14 +51,14 @@ export async function orderRoutes(fastify: FastifyInstance) {
             if (data === 50) status = 'submitted';
         }
         
-        connection.socket.send(JSON.stringify({ orderId, status, progress: data }));
+        socket.send(JSON.stringify({ orderId, status, progress: data }));
       }
     };
 
     // Listener 2: Completion
     const completedHandler = async ({ jobId, returnvalue }: { jobId: string; returnvalue: any }) => {
       if (jobId === orderId) {
-        connection.socket.send(JSON.stringify({ 
+        socket.send(JSON.stringify({ 
           orderId, 
           status: 'confirmed', 
           txHash: returnvalue.txHash,
@@ -70,7 +70,7 @@ export async function orderRoutes(fastify: FastifyInstance) {
     // Listener 3: Failure
     const failedHandler = async ({ jobId, failedReason }: { jobId: string; failedReason: string }) => {
       if (jobId === orderId) {
-        connection.socket.send(JSON.stringify({ orderId, status: 'failed', error: failedReason }));
+        socket.send(JSON.stringify({ orderId, status: 'failed', error: failedReason }));
       }
     };
 
@@ -79,7 +79,7 @@ export async function orderRoutes(fastify: FastifyInstance) {
     queueEvents.on('completed', completedHandler);
     queueEvents.on('failed', failedHandler);
 
-    connection.socket.on('close', () => {
+    socket.on('close', () => {
       console.log(`[WebSocket] Client disconnected: ${orderId}`);
       queueEvents.off('progress', progressHandler);
       queueEvents.off('completed', completedHandler);

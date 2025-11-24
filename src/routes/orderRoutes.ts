@@ -106,7 +106,7 @@ export async function orderRoutes(fastify: FastifyInstance) {
       queueEvents.on('failed', failedHandler);
 
       // Error handler
-      socket.on('error', (err) => {
+      socket.on('error', (err: Error) => {
         console.error(`[WebSocket] Socket error for ${orderId}:`, err);
       });
 

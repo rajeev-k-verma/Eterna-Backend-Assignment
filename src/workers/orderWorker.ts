@@ -2,6 +2,7 @@ import { Worker, Job } from 'bullmq';
 import { connection } from '../config/redis';
 import { ORDER_QUEUE_NAME } from '../infrastructure/queue';
 import { MockDexRouter, Order } from '../domain/mockDexRouter';
+import { saveOrder } from '../config/database';
 
 const router = new MockDexRouter();
 
@@ -26,12 +27,15 @@ const processOrder = async (job: Job<Order>) => {
 
     // Step 5: Update Status to "Confirmed"
     await job.updateProgress(100);
+
+    await saveOrder(order, result, 'confirmed');
     console.log(`[Status] Order ${order.orderId}: CONFIRMED. TxHash: ${result.txHash}`);
     
     return result;
 
-  } catch (error) {
+  } catch (error: any) {
     console.error(`[Worker] Failed order ${order.orderId}:`, error);
+    await saveOrder(order, null, 'failed', error.message);
     throw error;
   }
 };
